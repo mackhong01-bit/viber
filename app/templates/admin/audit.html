@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}审计日志{% endblock %}
+{% block content %}
+<h1 class="text-2xl font-bold text-gray-900 mb-6">审计日志</h1>
+<div class="bg-white rounded-lg shadow-sm overflow-x-auto">
+  <table class="w-full text-sm">
+    <thead class="bg-gray-50 text-gray-600">
+      <tr>
+        <th class="px-4 py-2 text-left">时间</th>
+        <th class="px-4 py-2 text-left">用户</th>
+        <th class="px-4 py-2 text-left">操作</th>
+        <th class="px-4 py-2 text-left">对象</th>
+        <th class="px-4 py-2 text-left">变更</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for log in items %}
+      <tr class="border-t">
+        <td class="px-4 py-2 text-gray-500 whitespace-nowrap">{{ log.created_at.strftime("%Y-%m-%d %H:%M:%S") }}</td>
+        <td class="px-4 py-2">{{ log.username or "-" }}</td>
+        <td class="px-4 py-2 font-mono text-xs">{{ log.action }}</td>
+        <td class="px-4 py-2 text-xs text-gray-600">{{ log.target_table or "" }}{% if log.target_id %}#{{ log.target_id }}{% endif %}</td>
+        <td class="px-4 py-2 text-xs">
+          {% if log.before_json %}<div class="text-red-700">{{ log.before_json }}</div>{% endif %}
+          {% if log.after_json %}<div class="text-green-700">{{ log.after_json }}</div>{% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

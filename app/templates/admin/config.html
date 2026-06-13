@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}系统配置{% endblock %}
+{% block content %}
+<h1 class="text-2xl font-bold text-gray-900 mb-6">系统配置</h1>
+<form method="post" action="/admin/config" class="bg-white rounded-lg shadow-sm p-6 max-w-3xl">
+  <div class="space-y-4">
+    {% for key, value, desc in configs %}
+    <div class="grid grid-cols-3 gap-4 items-center pb-3 border-b last:border-0">
+      <div>
+        <div class="font-medium text-gray-900 text-sm">{{ key }}</div>
+        <div class="text-xs text-gray-500 mt-0.5">{{ desc }}</div>
+      </div>
+      <div class="col-span-2">
+        {% if value in ("true", "false") %}
+        <select name="{{ key }}" class="w-full px-3 py-2 border rounded">
+          <option value="true" {% if value == "true" %}selected{% endif %}>开启</option>
+          <option value="false" {% if value == "false" %}selected{% endif %}>关闭</option>
+        </select>
+        {% else %}
+        <input name="{{ key }}" value="{{ value }}" class="w-full px-3 py-2 border rounded">
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  <div class="pt-6">
+    <button class="bg-blue-600 text-white px-5 py-2 rounded hover:bg-blue-700">保存</button>
+  </div>
+</form>
+{% endblock %}

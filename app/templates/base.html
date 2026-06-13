@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}财务系统{% endblock %}</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif; }
+  </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+  {% if user %}
+  <nav class="bg-white border-b shadow-sm">
+    <div class="max-w-7xl mx-auto px-4 flex items-center justify-between h-14">
+      <div class="flex items-center gap-6">
+        <a href="/" class="font-bold text-lg text-gray-900">💰 财务系统</a>
+        <a href="/" class="text-sm text-gray-600 hover:text-gray-900">仪表盘</a>
+        <a href="/requests" class="text-sm text-gray-600 hover:text-gray-900">付款申请</a>
+        <a href="/requests/new" class="text-sm text-gray-600 hover:text-gray-900">+ 新申请</a>
+        {% if user.role == "admin" %}
+        <span class="text-gray-300">|</span>
+        <a href="/admin/config" class="text-sm text-gray-600 hover:text-gray-900">系统配置</a>
+        <a href="/admin/categories" class="text-sm text-gray-600 hover:text-gray-900">分类</a>
+        <a href="/admin/users" class="text-sm text-gray-600 hover:text-gray-900">用户</a>
+        <a href="/admin/audit" class="text-sm text-gray-600 hover:text-gray-900">审计日志</a>
+        {% endif %}
+      </div>
+      <div class="flex items-center gap-3 text-sm">
+        <span class="text-gray-700">{{ user.full_name }}</span>
+        <span class="px-2 py-0.5 rounded text-xs bg-gray-100 text-gray-700">{{ user.role | role_label }}</span>
+        <a href="/logout" class="text-gray-500 hover:text-red-600">退出</a>
+      </div>
+    </div>
+  </nav>
+  {% endif %}
+
+  <main class="max-w-7xl mx-auto px-4 py-6">
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>

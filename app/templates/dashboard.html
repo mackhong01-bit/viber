@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}仪表盘{% endblock %}
+{% block content %}
+<h1 class="text-2xl font-bold text-gray-900 mb-6">仪表盘</h1>
+
+<div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+  <div class="bg-white p-5 rounded-lg shadow-sm">
+    <div class="text-sm text-gray-500">待财务审核</div>
+    <div class="text-3xl font-bold text-yellow-600 mt-1">{{ stats.pending_finance }}</div>
+  </div>
+  <div class="bg-white p-5 rounded-lg shadow-sm">
+    <div class="text-sm text-gray-500">待管理审批</div>
+    <div class="text-3xl font-bold text-blue-600 mt-1">{{ stats.pending_approval }}</div>
+  </div>
+  <div class="bg-white p-5 rounded-lg shadow-sm">
+    <div class="text-sm text-gray-500">本月已付款</div>
+    <div class="text-2xl font-bold text-green-600 mt-1">{{ stats.month_paid | money }}</div>
+  </div>
+  <div class="bg-white p-5 rounded-lg shadow-sm">
+    <div class="text-sm text-gray-500">异常单据</div>
+    <div class="text-3xl font-bold text-red-600 mt-1">{{ stats.flagged }}</div>
+  </div>
+</div>
+
+<div class="bg-white rounded-lg shadow-sm">
+  <div class="px-5 py-3 border-b flex justify-between items-center">
+    <h2 class="font-semibold text-gray-900">最近申请</h2>
+    <a href="/requests" class="text-sm text-blue-600 hover:underline">全部 →</a>
+  </div>
+  <table class="w-full text-sm">
+    <thead class="bg-gray-50 text-gray-600">
+      <tr>
+        <th class="px-5 py-2 text-left">编号</th>
+        <th class="px-5 py-2 text-left">申请人</th>
+        <th class="px-5 py-2 text-left">金额</th>
+        <th class="px-5 py-2 text-left">类别</th>
+        <th class="px-5 py-2 text-left">状态</th>
+        <th class="px-5 py-2 text-left">提交时间</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in recent %}
+      <tr class="border-t hover:bg-gray-50">
+        <td class="px-5 py-2"><a class="text-blue-600 hover:underline" href="/requests/{{ r.id }}">{{ r.code }}</a></td>
+        <td class="px-5 py-2">{{ r.applicant.full_name }}</td>
+        <td class="px-5 py-2 font-medium">{{ r.amount | money(r.currency) }}</td>
+        <td class="px-5 py-2">{{ r.category }}</td>
+        <td class="px-5 py-2"><span class="px-2 py-0.5 rounded text-xs {{ r.status | status_color }}">{{ r.status | status_label }}</span></td>
+        <td class="px-5 py-2 text-gray-500">{{ r.created_at.strftime("%Y-%m-%d %H:%M") }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="6" class="px-5 py-8 text-center text-gray-400">暂无数据</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

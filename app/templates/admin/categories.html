@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}申请单分类{% endblock %}
+{% block content %}
+<h1 class="text-2xl font-bold text-gray-900 mb-6">申请单分类</h1>
+
+<form method="post" action="/admin/categories/add" class="bg-white rounded-lg shadow-sm p-4 mb-4 flex gap-2 max-w-lg">
+  <input name="name" required placeholder="新分类名" class="flex-1 px-3 py-2 border rounded">
+  <button class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">添加</button>
+</form>
+
+<div class="bg-white rounded-lg shadow-sm max-w-lg">
+  <table class="w-full text-sm">
+    <thead class="bg-gray-50 text-gray-600">
+      <tr><th class="px-4 py-2 text-left">名称</th><th class="px-4 py-2 text-left">状态</th><th class="px-4 py-2"></th></tr>
+    </thead>
+    <tbody>
+      {% for c in items %}
+      <tr class="border-t">
+        <td class="px-4 py-2">{{ c.name }}</td>
+        <td class="px-4 py-2">
+          {% if c.is_active %}
+          <span class="px-2 py-0.5 rounded text-xs bg-green-100 text-green-700">启用</span>
+          {% else %}
+          <span class="px-2 py-0.5 rounded text-xs bg-gray-100 text-gray-600">停用</span>
+          {% endif %}
+        </td>
+        <td class="px-4 py-2 text-right">
+          <form method="post" action="/admin/categories/{{ c.id }}/toggle" class="inline">
+            <button class="text-blue-600 hover:underline text-xs">{% if c.is_active %}停用{% else %}启用{% endif %}</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
