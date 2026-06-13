@@ -1,7 +1,7 @@
 services:
   app:
     build: .
-    container_name: viber-finance
+    container_name: finance
     restart: unless-stopped
     ports:
       - "8000:8000"

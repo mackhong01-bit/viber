@@ -4,9 +4,9 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
-    app_name: str = "Viber Finance"
+    app_name: str = "Finance"
     secret_key: str = "change-me"
-    database_url: str = "sqlite:///./data/viber.db"
+    database_url: str = "sqlite:///./data/finance.db"
     timezone: str = "Asia/Shanghai"
 
     admin_username: str = "admin"
