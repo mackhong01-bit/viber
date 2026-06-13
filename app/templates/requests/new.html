@@ -15,7 +15,7 @@
 </div>
 {% endif %}
 
-<form method="post" action="/requests/new" class="bg-white rounded-lg shadow-sm p-6 max-w-2xl space-y-4">
+<form method="post" action="/requests/new" enctype="multipart/form-data" class="bg-white rounded-lg shadow-sm p-6 max-w-2xl space-y-4">
   <div class="grid grid-cols-2 gap-4">
     <div>
       <label class="block text-sm font-medium text-gray-700 mb-1">金额 <span class="text-red-500">*</span></label>
@@ -75,6 +75,18 @@
     <label class="block text-sm font-medium text-gray-700 mb-1">用途 <span class="text-red-500">*</span></label>
     <textarea name="purpose" rows="3" required
               class="w-full px-3 py-2 border rounded">{{ form.purpose or '' }}</textarea>
+  </div>
+
+  <div>
+    <label class="block text-sm font-medium text-gray-700 mb-1">
+      采购单/票据截图 <span class="text-red-500">*</span>
+    </label>
+    <input type="file" name="attachment" accept="image/*,application/pdf" required
+           class="w-full px-3 py-2 border rounded text-sm">
+    <p class="text-xs text-gray-500 mt-1">支持图片或 PDF，最大 10MB。所有申请必须附凭证。</p>
+    {% if form.uploaded_attachment %}
+    <p class="text-xs text-orange-600 mt-1">⚠️ 检测到重复，请重新选择文件后再提交。</p>
+    {% endif %}
   </div>
 
   {% if duplicate_warning %}

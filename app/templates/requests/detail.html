@@ -9,6 +9,18 @@
   <span class="px-3 py-1 rounded text-sm {{ req.status | status_color }}">{{ req.status | status_label }}</span>
 </div>
 
+{% if req.is_locked %}
+<div class="mb-4 p-3 rounded bg-gray-100 border border-gray-300 text-sm text-gray-700">
+  🔒 已付款，金额/用途字段已锁定，任何修改需通过冲销单（M3 提供）。
+</div>
+{% endif %}
+
+{% if req.status == "flagged" %}
+<div class="mb-4 p-3 rounded bg-red-50 border border-red-300 text-sm text-red-800">
+  ⚠️ 异常单据：财务已付款，但管理审批未通过。请财务跟进。
+</div>
+{% endif %}
+
 <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
   <div class="md:col-span-2 bg-white rounded-lg shadow-sm p-6 space-y-3">
     <div class="grid grid-cols-2 gap-4 text-sm">
@@ -20,13 +32,91 @@
       <div><div class="text-gray-500">收款方</div><div class="font-medium">{{ req.payee or "-" }}</div></div>
       <div class="col-span-2"><div class="text-gray-500">收款账号</div><div class="font-medium">{{ req.payee_account or "-" }}</div></div>
       <div class="col-span-2"><div class="text-gray-500">用途</div><div class="font-medium whitespace-pre-wrap">{{ req.purpose }}</div></div>
+      {% if req.attachment_path %}
+      <div class="col-span-2">
+        <div class="text-gray-500">采购单/票据截图</div>
+        <a href="/{{ req.attachment_path }}" target="_blank"
+           class="inline-block mt-1 px-3 py-1 bg-blue-50 text-blue-700 rounded text-xs hover:bg-blue-100">
+          📎 查看附件
+        </a>
+      </div>
+      {% endif %}
+      {% if req.paid_at %}
+      <div><div class="text-gray-500">付款时间</div><div class="font-medium">{{ req.paid_at.strftime("%Y-%m-%d %H:%M") }}</div></div>
+      {% endif %}
+      {% if req.approved_at %}
+      <div><div class="text-gray-500">审批时间</div><div class="font-medium">{{ req.approved_at.strftime("%Y-%m-%d %H:%M") }}</div></div>
+      {% endif %}
     </div>
 
+    {# === 申请人撤销 === #}
     {% if req.applicant_id == user.id and req.status == "pending_finance" %}
     <form method="post" action="/requests/{{ req.id }}/cancel" class="pt-4 border-t"
           onsubmit="return confirm('确定撤销这张申请吗？');">
       <button class="text-sm text-red-600 hover:underline">撤销申请</button>
     </form>
+    {% endif %}
+
+    {# === 财务操作 === #}
+    {% if user.role in ("finance", "admin") and req.status == "pending_finance" %}
+    <div class="pt-4 border-t space-y-3">
+      <div class="text-sm font-semibold text-gray-900">财务操作</div>
+      <form method="post" action="/requests/{{ req.id }}/finance/pay" enctype="multipart/form-data" class="space-y-2"
+            onsubmit="if(!this.attachment.files.length){alert('付款必须上传付款凭证截图');return false;}">
+        <textarea name="note" rows="2" placeholder="备注（可选）"
+                  class="w-full px-3 py-2 border rounded text-sm"></textarea>
+        <label class="block text-xs font-medium text-gray-700">付款凭证截图 <span class="text-red-500">*</span></label>
+        <input type="file" name="attachment" accept="image/*,application/pdf" required
+               class="w-full px-3 py-2 border rounded text-sm">
+        <button class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 text-sm">
+          ✓ 审核通过并付款
+        </button>
+      </form>
+      <form method="post" action="/requests/{{ req.id }}/finance/reject" enctype="multipart/form-data" class="space-y-2"
+            onsubmit="if(!this.note.value.trim()){alert('驳回必须填写原因');return false;}">
+        <textarea name="note" rows="2" placeholder="驳回原因（必填）"
+                  class="w-full px-3 py-2 border rounded text-sm"></textarea>
+        <label class="block text-xs font-medium text-gray-700">附件（可选）</label>
+        <input type="file" name="attachment" accept="image/*,application/pdf"
+               class="w-full px-3 py-2 border rounded text-sm">
+        <button class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 text-sm">
+          ✗ 驳回
+        </button>
+      </form>
+    </div>
+    {% endif %}
+
+    {# === 管理审批 === #}
+    {% if user.role in ("manager", "admin") and req.status in ("paid", "paid_pending_approval") %}
+    <div class="pt-4 border-t space-y-3">
+      <div class="text-sm font-semibold text-gray-900">
+        管理审批
+        {% if req.status == "paid_pending_approval" %}
+        <span class="text-xs text-orange-600 ml-2">（小额已先付，需补审批）</span>
+        {% endif %}
+      </div>
+      <form method="post" action="/requests/{{ req.id }}/manager/approve" enctype="multipart/form-data" class="space-y-2">
+        <textarea name="note" rows="2" placeholder="备注（可选）"
+                  class="w-full px-3 py-2 border rounded text-sm"></textarea>
+        <label class="block text-xs font-medium text-gray-700">附件（可选，如签字单）</label>
+        <input type="file" name="attachment" accept="image/*,application/pdf"
+               class="w-full px-3 py-2 border rounded text-sm">
+        <button class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 text-sm">
+          ✓ 批准
+        </button>
+      </form>
+      <form method="post" action="/requests/{{ req.id }}/manager/reject" enctype="multipart/form-data" class="space-y-2"
+            onsubmit="if(!this.note.value.trim()){alert('驳回必须填写原因');return false;}">
+        <textarea name="note" rows="2" placeholder="驳回原因（必填）"
+                  class="w-full px-3 py-2 border rounded text-sm"></textarea>
+        <label class="block text-xs font-medium text-gray-700">附件（可选）</label>
+        <input type="file" name="attachment" accept="image/*,application/pdf"
+               class="w-full px-3 py-2 border rounded text-sm">
+        <button class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 text-sm">
+          ✗ 驳回（已付款将标记为异常）
+        </button>
+      </form>
+    </div>
     {% endif %}
   </div>
 
@@ -42,10 +132,24 @@
       </li>
       {% for a in req.approvals %}
       <li class="flex gap-3">
-        <span class="w-2 h-2 rounded-full bg-green-500 mt-1.5"></span>
+        <span class="w-2 h-2 rounded-full
+          {% if a.action in ('finance_reject','manager_reject') %}bg-red-500{% else %}bg-green-500{% endif %}
+           mt-1.5"></span>
         <div>
-          <div class="font-medium">{{ a.approver.full_name }} · {{ a.action }}</div>
+          <div class="font-medium">
+            {{ a.approver.full_name }} ·
+            {% if a.action == "finance_pay" %}财务通过并付款
+            {% elif a.action == "finance_reject" %}财务驳回
+            {% elif a.action == "manager_approve" %}管理批准
+            {% elif a.action == "manager_reject" %}管理驳回
+            {% elif a.action == "cancel" %}撤销
+            {% else %}{{ a.action }}{% endif %}
+          </div>
           {% if a.note %}<div class="text-gray-600">{{ a.note }}</div>{% endif %}
+          {% if a.attachment_path %}
+          <a href="/{{ a.attachment_path }}" target="_blank"
+             class="inline-block mt-1 px-2 py-0.5 bg-blue-50 text-blue-700 rounded text-xs hover:bg-blue-100">📎 附件</a>
+          {% endif %}
           <div class="text-gray-500 text-xs">{{ a.created_at.strftime("%Y-%m-%d %H:%M") }}</div>
         </div>
       </li>
@@ -53,7 +157,12 @@
       {% if req.status == "pending_finance" %}
       <li class="flex gap-3 text-gray-400">
         <span class="w-2 h-2 rounded-full bg-gray-300 mt-1.5"></span>
-        <div>等待财务审核（M2 实现）</div>
+        <div>等待财务审核</div>
+      </li>
+      {% elif req.status in ("paid","paid_pending_approval") %}
+      <li class="flex gap-3 text-gray-400">
+        <span class="w-2 h-2 rounded-full bg-gray-300 mt-1.5"></span>
+        <div>等待管理{% if req.status == "paid_pending_approval" %}补{% endif %}审批</div>
       </li>
       {% endif %}
     </ol>

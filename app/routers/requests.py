@@ -1,6 +1,6 @@
 from decimal import Decimal, InvalidOperation
 
-from fastapi import APIRouter, Request, Depends, Form, HTTPException
+from fastapi import APIRouter, Request, Depends, Form, HTTPException, UploadFile, File
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
@@ -10,6 +10,7 @@ from app.models.payment import PaymentRequest, PaymentStatus
 from app.models.config import Category, Department
 from app.services.auth import require_user
 from app.services.audit import log as audit_log
+from app.services.uploads import save_upload
 from app.services import config_service, payment_service
 from app.templates_env import templates
 
@@ -79,6 +80,7 @@ def new_submit(
     payee_account: str = Form(""),
     purpose: str = Form(...),
     confirm_duplicate: str = Form(""),
+    attachment: UploadFile | None = File(None),
 ):
     try:
         amt = Decimal(amount)
@@ -86,6 +88,10 @@ def new_submit(
             raise InvalidOperation
     except InvalidOperation:
         raise HTTPException(400, "金额格式错误")
+
+    attachment_path = save_upload(attachment, subdir="requests")
+    if not attachment_path:
+        raise HTTPException(400, "必须上传采购单/票据截图")
 
     if not confirm_duplicate:
         dup = payment_service.find_possible_duplicate(db, user.id, amt, purpose.strip())
@@ -110,6 +116,7 @@ def new_submit(
                         "payee": payee,
                         "payee_account": payee_account,
                         "purpose": purpose,
+                        "uploaded_attachment": attachment_path,
                     },
                 },
             )
@@ -125,6 +132,7 @@ def new_submit(
         payee=payee or None,
         payee_account=payee_account or None,
         purpose=purpose.strip(),
+        attachment_path=attachment_path,
         status=PaymentStatus.PENDING_FINANCE.value,
     )
     db.add(req)
@@ -133,7 +141,8 @@ def new_submit(
 
     audit_log(
         db, user, "request.create", "payment_requests", req.id,
-        after={"code": req.code, "amount": str(amt), "category": category, "purpose": purpose},
+        after={"code": req.code, "amount": str(amt), "category": category,
+               "purpose": purpose, "attachment": attachment_path},
     )
 
     return RedirectResponse(f"/requests/{req.id}", status_code=303)
@@ -177,3 +186,88 @@ def cancel(
     audit_log(db, user, "request.cancel", "payment_requests", req.id,
               before=before, after={"status": req.status})
     return RedirectResponse(f"/requests/{req.id}", status_code=303)
+
+
+def _load_request(db: Session, req_id: int) -> PaymentRequest:
+    req = db.get(PaymentRequest, req_id)
+    if not req:
+        raise HTTPException(404, "申请单不存在")
+    return req
+
+
+@router.post("/{req_id}/finance/pay")
+def finance_pay_route(
+    req_id: int,
+    note: str = Form(""),
+    attachment: UploadFile | None = File(None),
+    db: Session = Depends(get_db),
+    user: User = Depends(require_user),
+):
+    req = _load_request(db, req_id)
+    attachment_path = save_upload(attachment, subdir="payments")
+    diff = payment_service.finance_pay(db, req, user, note.strip() or None, attachment_path)
+    diff["after"]["attachment"] = attachment_path
+    audit_log(db, user, "request.finance_pay", "payment_requests", req.id,
+              before=diff["before"], after=diff["after"])
+    return RedirectResponse(f"/requests/{req.id}", status_code=303)
+
+
+@router.post("/{req_id}/finance/reject")
+def finance_reject_route(
+    req_id: int,
+    note: str = Form(""),
+    attachment: UploadFile | None = File(None),
+    db: Session = Depends(get_db),
+    user: User = Depends(require_user),
+):
+    req = _load_request(db, req_id)
+    attachment_path = save_upload(attachment, subdir="rejections")
+    diff = payment_service.finance_reject(db, req, user, note.strip() or None, attachment_path)
+    audit_log(db, user, "request.finance_reject", "payment_requests", req.id,
+              before=diff["before"], after=diff["after"])
+    return RedirectResponse(f"/requests/{req.id}", status_code=303)
+
+
+@router.post("/{req_id}/manager/approve")
+def manager_approve_route(
+    req_id: int,
+    note: str = Form(""),
+    attachment: UploadFile | None = File(None),
+    db: Session = Depends(get_db),
+    user: User = Depends(require_user),
+):
+    req = _load_request(db, req_id)
+    attachment_path = save_upload(attachment, subdir="approvals")
+    diff = payment_service.manager_approve(db, req, user, note.strip() or None, attachment_path)
+    audit_log(db, user, "request.manager_approve", "payment_requests", req.id,
+              before=diff["before"], after=diff["after"])
+    return RedirectResponse(f"/requests/{req.id}", status_code=303)
+
+
+@router.post("/{req_id}/manager/reject")
+def manager_reject_route(
+    req_id: int,
+    note: str = Form(""),
+    attachment: UploadFile | None = File(None),
+    db: Session = Depends(get_db),
+    user: User = Depends(require_user),
+):
+    req = _load_request(db, req_id)
+    attachment_path = save_upload(attachment, subdir="rejections")
+    diff = payment_service.manager_reject(db, req, user, note.strip() or None, attachment_path)
+    audit_log(db, user, "request.manager_reject", "payment_requests", req.id,
+              before=diff["before"], after=diff["after"])
+    return RedirectResponse(f"/requests/{req.id}", status_code=303)
+
+
+@router.get("/inbox/mine")
+def my_inbox(
+    request: Request,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_user),
+):
+    items = payment_service.actionable_for(db, user).limit(200).all()
+    return templates.TemplateResponse(
+        "requests/inbox.html",
+        {"request": request, "user": user, "items": items},
+    )

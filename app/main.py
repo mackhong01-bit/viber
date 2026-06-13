@@ -1,9 +1,13 @@
+import os
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Request
-from fastapi.responses import RedirectResponse, JSONResponse
+from fastapi import FastAPI, Request, Depends
+from fastapi.responses import RedirectResponse, JSONResponse, FileResponse
 from fastapi.exceptions import HTTPException
 from starlette.middleware.sessions import SessionMiddleware
+
+from app.services.auth import require_user
+from app.models.user import User
 
 from app.config import settings
 from app.database import Base, engine, SessionLocal
@@ -70,3 +74,14 @@ app.include_router(admin_router.router)
 @app.get("/healthz")
 def healthz():
     return {"status": "ok"}
+
+
+@app.get("/uploads/{path:path}")
+def serve_upload(path: str, user: User = Depends(require_user)):
+    """Serve uploaded files to authenticated users only."""
+    full = os.path.normpath(os.path.join("uploads", path))
+    if not full.startswith("uploads" + os.sep) and full != "uploads":
+        raise HTTPException(404)
+    if not os.path.isfile(full):
+        raise HTTPException(404)
+    return FileResponse(full)
