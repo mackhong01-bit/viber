@@ -21,6 +21,10 @@
         {% if user.role in ("finance", "manager", "admin") %}
         <a href="/requests/inbox/mine" class="text-sm text-orange-600 hover:text-orange-800 font-medium">待我处理</a>
         {% endif %}
+        <a href="/petty-cash" class="text-sm text-gray-600 hover:text-gray-900">备用金</a>
+        {% if user.role in ("finance", "manager", "admin") %}
+        <a href="/reports" class="text-sm text-gray-600 hover:text-gray-900">报表</a>
+        {% endif %}
         {% if user.role == "admin" %}
         <span class="text-gray-300">|</span>
         <a href="/admin/config" class="text-sm text-gray-600 hover:text-gray-900">系统配置</a>

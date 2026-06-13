@@ -25,6 +25,9 @@ class PettyCash(Base):
     balance_after: Mapped[Decimal] = mapped_column(Numeric(14, 2))
     ref_request_id: Mapped[int | None] = mapped_column(ForeignKey("payment_requests.id"), nullable=True)
     note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    attachment_path: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    operator_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
 
-    user = relationship("User")
+    user = relationship("User", foreign_keys=[user_id])
+    operator = relationship("User", foreign_keys=[operator_id])

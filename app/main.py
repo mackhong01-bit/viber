@@ -18,6 +18,8 @@ from app.routers import auth as auth_router
 from app.routers import requests as requests_router
 from app.routers import admin as admin_router
 from app.routers import dashboard as dashboard_router
+from app.routers import petty_cash as petty_cash_router
+from app.routers import reports as reports_router
 
 
 def _bootstrap():
@@ -68,6 +70,8 @@ async def http_error(request: Request, exc: HTTPException):
 app.include_router(auth_router.router)
 app.include_router(dashboard_router.router)
 app.include_router(requests_router.router)
+app.include_router(petty_cash_router.router)
+app.include_router(reports_router.router)
 app.include_router(admin_router.router)
 
 
