@@ -55,8 +55,10 @@ def index(
 @router.post("/allocate")
 def allocate(
     target_user_id: int = Form(...),
+    account_type: str = Form("cash"),
     amount: str = Form(...),
     note: str = Form(""),
+    tx_hash: str = Form(""),
     attachment: UploadFile | None = File(None),
     db: Session = Depends(get_db),
     user: User = Depends(require_user),
@@ -68,12 +70,14 @@ def allocate(
     path = save_upload(attachment, subdir="petty_cash")
     entry = petty_cash_service.record(
         db, target_user=target, operator=user,
-        type_=PettyCashType.ALLOCATE.value, amount=amt,
-        note=note.strip() or None, attachment_path=path,
+        type_=PettyCashType.ALLOCATE.value, account_type=account_type,
+        amount=amt, note=note.strip() or None, attachment_path=path,
+        tx_hash=tx_hash.strip() or None,
     )
     audit_log(db, user, "petty_cash.allocate", "petty_cash", entry.id,
-              after={"target": target.username, "amount": str(amt),
-                     "balance_after": str(entry.balance_after), "attachment": path})
+              after={"target": target.username, "account_type": account_type,
+                     "amount": str(amt), "balance_after": str(entry.balance_after),
+                     "tx_hash": tx_hash, "attachment": path})
     telegram.notify_petty_cash(db, entry, user)
     return RedirectResponse("/petty-cash", status_code=303)
 
@@ -81,8 +85,10 @@ def allocate(
 @router.post("/replenish")
 def replenish(
     target_user_id: int = Form(...),
+    account_type: str = Form("cash"),
     amount: str = Form(...),
     note: str = Form(""),
+    tx_hash: str = Form(""),
     attachment: UploadFile | None = File(None),
     db: Session = Depends(get_db),
     user: User = Depends(require_user),
@@ -94,20 +100,24 @@ def replenish(
     path = save_upload(attachment, subdir="petty_cash")
     entry = petty_cash_service.record(
         db, target_user=target, operator=user,
-        type_=PettyCashType.REPLENISH.value, amount=amt,
-        note=note.strip() or None, attachment_path=path,
+        type_=PettyCashType.REPLENISH.value, account_type=account_type,
+        amount=amt, note=note.strip() or None, attachment_path=path,
+        tx_hash=tx_hash.strip() or None,
     )
     audit_log(db, user, "petty_cash.replenish", "petty_cash", entry.id,
-              after={"target": target.username, "amount": str(amt),
-                     "balance_after": str(entry.balance_after), "attachment": path})
+              after={"target": target.username, "account_type": account_type,
+                     "amount": str(amt), "balance_after": str(entry.balance_after),
+                     "tx_hash": tx_hash, "attachment": path})
     telegram.notify_petty_cash(db, entry, user)
     return RedirectResponse("/petty-cash", status_code=303)
 
 
 @router.post("/spend")
 def spend(
+    account_type: str = Form("cash"),
     amount: str = Form(...),
     note: str = Form(""),
+    tx_hash: str = Form(""),
     attachment: UploadFile | None = File(None),
     db: Session = Depends(get_db),
     user: User = Depends(require_user),
@@ -118,20 +128,24 @@ def spend(
         raise HTTPException(400, "支出用途必填")
     entry = petty_cash_service.record(
         db, target_user=user, operator=user,
-        type_=PettyCashType.SPEND.value, amount=amt,
-        note=note.strip(), attachment_path=path,
+        type_=PettyCashType.SPEND.value, account_type=account_type,
+        amount=amt, note=note.strip(), attachment_path=path,
+        tx_hash=tx_hash.strip() or None,
     )
     audit_log(db, user, "petty_cash.spend", "petty_cash", entry.id,
-              after={"amount": str(amt), "balance_after": str(entry.balance_after),
-                     "note": note, "attachment": path})
+              after={"account_type": account_type, "amount": str(amt),
+                     "balance_after": str(entry.balance_after),
+                     "note": note, "tx_hash": tx_hash, "attachment": path})
     telegram.notify_petty_cash(db, entry, user)
     return RedirectResponse("/petty-cash", status_code=303)
 
 
 @router.post("/return")
 def return_cash(
+    account_type: str = Form("cash"),
     amount: str = Form(...),
     note: str = Form(""),
+    tx_hash: str = Form(""),
     attachment: UploadFile | None = File(None),
     db: Session = Depends(get_db),
     user: User = Depends(require_user),
@@ -140,11 +154,13 @@ def return_cash(
     path = save_upload(attachment, subdir="petty_cash")
     entry = petty_cash_service.record(
         db, target_user=user, operator=user,
-        type_=PettyCashType.RETURN.value, amount=amt,
-        note=note.strip() or None, attachment_path=path,
+        type_=PettyCashType.RETURN.value, account_type=account_type,
+        amount=amt, note=note.strip() or None, attachment_path=path,
+        tx_hash=tx_hash.strip() or None,
     )
     audit_log(db, user, "petty_cash.return", "petty_cash", entry.id,
-              after={"amount": str(amt), "balance_after": str(entry.balance_after),
-                     "attachment": path})
+              after={"account_type": account_type, "amount": str(amt),
+                     "balance_after": str(entry.balance_after),
+                     "tx_hash": tx_hash, "attachment": path})
     telegram.notify_petty_cash(db, entry, user)
     return RedirectResponse("/petty-cash", status_code=303)

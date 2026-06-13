@@ -8,6 +8,12 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.database import Base
 
 
+class AccountType(str, Enum):
+    CASH = "cash"
+    USDT_TRC20 = "usdt_trc20"
+    BANK = "bank"
+
+
 class PaymentStatus(str, Enum):
     PENDING_FINANCE = "pending_finance"        # 待财务审核
     PAID_PENDING_APPROVAL = "paid_pending_approval"  # 小额已付，待管理补审批
@@ -34,10 +40,13 @@ class PaymentRequest(Base):
     applicant_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
     amount: Mapped[Decimal] = mapped_column(Numeric(14, 2))
     currency: Mapped[str] = mapped_column(String(8), default="CNY")
+    account_type: Mapped[str] = mapped_column(String(20), default=AccountType.CASH.value, index=True)
     category: Mapped[str] = mapped_column(String(50))
     department: Mapped[str | None] = mapped_column(String(50), nullable=True)
     payee: Mapped[str | None] = mapped_column(String(100), nullable=True)
     payee_account: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    payee_address: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    tx_hash: Mapped[str | None] = mapped_column(String(80), nullable=True, index=True)
     purpose: Mapped[str] = mapped_column(Text)
     attachment_path: Mapped[str | None] = mapped_column(String(255), nullable=True)
     status: Mapped[str] = mapped_column(String(30), default=PaymentStatus.PENDING_FINANCE.value, index=True)

@@ -24,5 +24,7 @@ class User(Base):
     role: Mapped[str] = mapped_column(String(20), default=UserRole.APPLICANT.value)
     telegram_chat_id: Mapped[str | None] = mapped_column(String(50), nullable=True)
     department: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    usdt_trc20_address: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    bank_account: Mapped[str | None] = mapped_column(String(64), nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)

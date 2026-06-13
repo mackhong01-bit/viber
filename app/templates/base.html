@@ -23,6 +23,7 @@
         {% endif %}
         <a href="/petty-cash" class="text-sm text-gray-600 hover:text-gray-900">备用金</a>
         {% if user.role in ("finance", "manager", "admin") %}
+        <a href="/usdt" class="text-sm text-amber-600 hover:text-amber-800">USDT 监控</a>
         <a href="/reports" class="text-sm text-gray-600 hover:text-gray-900">报表</a>
         {% endif %}
         {% if user.role == "admin" %}

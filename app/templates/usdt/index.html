@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}USDT 监控{% endblock %}
+{% block content %}
+<h1 class="text-2xl font-bold text-gray-900 mb-2">USDT-TRC20 钱包监控</h1>
+<p class="text-sm text-gray-500 mb-6">
+  链上数据来自 Tronscan 公共 API。"差额" = 链上余额 - 系统账面余额。
+  正差额 = 钱包里多出来的钱（可能未入账）；负差额 = 系统记账多于实际（异常，需排查）。
+</p>
+
+<div class="bg-white rounded-lg shadow-sm overflow-x-auto">
+  <table class="w-full text-sm">
+    <thead class="bg-gray-50 text-gray-600">
+      <tr>
+        <th class="px-4 py-2 text-left">员工</th>
+        <th class="px-4 py-2 text-left">USDT 地址</th>
+        <th class="px-4 py-2 text-right">链上余额</th>
+        <th class="px-4 py-2 text-right">系统账面</th>
+        <th class="px-4 py-2 text-right">差额</th>
+        <th class="px-4 py-2"></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in rows %}
+      <tr class="border-t">
+        <td class="px-4 py-2 font-medium">{{ r.user.full_name }}</td>
+        <td class="px-4 py-2 font-mono text-xs text-gray-600">{{ r.address }}</td>
+        <td class="px-4 py-2 text-right font-semibold">
+          {% if r.on_chain is none %}
+            <span class="text-red-500" title="无法查询链上数据">--</span>
+          {% else %}
+            {{ "%.6f"|format(r.on_chain|float) }}
+          {% endif %}
+        </td>
+        <td class="px-4 py-2 text-right">{{ "%.6f"|format(r.system|float) }}</td>
+        <td class="px-4 py-2 text-right font-semibold
+          {% if r.diff is none %}text-gray-400
+          {% elif r.diff < 0 %}text-red-600
+          {% elif r.diff > 0 %}text-orange-600
+          {% else %}text-green-600{% endif %}">
+          {% if r.diff is none %}--
+          {% else %}{{ "%+.6f"|format(r.diff|float) }}{% endif %}
+        </td>
+        <td class="px-4 py-2 text-right">
+          <a href="/usdt/{{ r.user.id }}" class="text-blue-600 hover:underline text-xs">详情 →</a>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="6" class="px-4 py-8 text-center text-gray-400">
+        暂无配置 USDT 地址的员工。请在 后台 → 用户 编辑员工填入 TRC20 地址。
+      </td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

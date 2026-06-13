@@ -1,5 +1,5 @@
 from app.models.user import User, UserRole
-from app.models.payment import PaymentRequest, PaymentStatus, Approval, ApprovalAction
+from app.models.payment import PaymentRequest, PaymentStatus, Approval, ApprovalAction, AccountType
 from app.models.config import SystemConfig, Category, Department
 from app.models.audit import AuditLog
 from app.models.petty_cash import PettyCash, PettyCashType
@@ -11,6 +11,7 @@ __all__ = [
     "PaymentStatus",
     "Approval",
     "ApprovalAction",
+    "AccountType",
     "SystemConfig",
     "Category",
     "Department",

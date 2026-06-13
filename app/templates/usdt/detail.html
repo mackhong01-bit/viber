@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+{% block title %}USDT - {{ target.full_name }}{% endblock %}
+{% block content %}
+<a href="/usdt" class="text-sm text-gray-500 hover:text-gray-900">← 返回 USDT 监控</a>
+<h1 class="text-2xl font-bold text-gray-900 mt-1 mb-1">{{ target.full_name }} 的 USDT 钱包</h1>
+<div class="font-mono text-xs text-gray-500 mb-6">{{ target.usdt_trc20_address }}</div>
+
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+  <div class="bg-white p-5 rounded-lg shadow-sm">
+    <div class="text-sm text-gray-500">链上余额</div>
+    <div class="text-2xl font-bold text-gray-900 mt-1">
+      {% if on_chain is none %}--{% else %}{{ "%.6f"|format(on_chain|float) }} USDT{% endif %}
+    </div>
+  </div>
+  <div class="bg-white p-5 rounded-lg shadow-sm">
+    <div class="text-sm text-gray-500">系统账面</div>
+    <div class="text-2xl font-bold text-gray-900 mt-1">{{ "%.6f"|format(system_bal|float) }} USDT</div>
+  </div>
+  <div class="bg-white p-5 rounded-lg shadow-sm">
+    <div class="text-sm text-gray-500">未入账 TX</div>
+    <div class="text-2xl font-bold {% if reconciliation.missing_in_system %}text-orange-600{% else %}text-green-600{% endif %} mt-1">
+      {{ reconciliation.missing_in_system | length }}
+    </div>
+  </div>
+</div>
+
+{% if reconciliation.unmatched_in_system %}
+<div class="mb-6 p-4 rounded bg-red-50 border border-red-300">
+  <div class="font-semibold text-red-900 mb-1">⚠️ 系统账有以下 tx_hash 链上找不到：</div>
+  <ul class="text-xs font-mono text-red-700">
+    {% for h in reconciliation.unmatched_in_system %}
+    <li>{{ h }}</li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+  <div class="bg-white rounded-lg shadow-sm">
+    <div class="px-5 py-3 border-b">
+      <h2 class="font-semibold text-gray-900">链上交易（最近 50 笔）</h2>
+    </div>
+    <table class="w-full text-sm">
+      <thead class="bg-gray-50 text-gray-600">
+        <tr>
+          <th class="px-3 py-2 text-left">时间</th>
+          <th class="px-3 py-2 text-left">方向</th>
+          <th class="px-3 py-2 text-right">金额</th>
+          <th class="px-3 py-2 text-left">对方</th>
+          <th class="px-3 py-2 text-left">入账</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for tx in reconciliation.on_chain %}
+        <tr class="border-t">
+          <td class="px-3 py-2 text-xs text-gray-500 whitespace-nowrap">
+            {% if tx.ts %}{{ tx.ts.strftime("%Y-%m-%d %H:%M") }}{% else %}-{% endif %}
+          </td>
+          <td class="px-3 py-2">
+            {% if tx.direction == "in" %}
+            <span class="px-2 py-0.5 rounded text-xs bg-green-100 text-green-700">入</span>
+            {% else %}
+            <span class="px-2 py-0.5 rounded text-xs bg-red-100 text-red-700">出</span>
+            {% endif %}
+          </td>
+          <td class="px-3 py-2 text-right font-medium">{{ "%.6f"|format(tx.amount|float) }}</td>
+          <td class="px-3 py-2 font-mono text-xs text-gray-500 max-w-[160px] truncate"
+              title="{{ tx.from if tx.direction == 'in' else tx.to }}">
+            {{ (tx.from if tx.direction == 'in' else tx.to)[:14] }}...
+          </td>
+          <td class="px-3 py-2">
+            {% if tx.tx_hash in reconciliation.missing_in_system | map(attribute='tx_hash') | list %}
+            <span class="px-2 py-0.5 rounded text-xs bg-orange-100 text-orange-700">未入账</span>
+            {% else %}
+            <span class="px-2 py-0.5 rounded text-xs bg-green-100 text-green-700">✓</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5" class="px-3 py-6 text-center text-gray-400">
+          {% if on_chain is none %}无法连接链上 API{% else %}无交易记录{% endif %}
+        </td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="bg-white rounded-lg shadow-sm">
+    <div class="px-5 py-3 border-b">
+      <h2 class="font-semibold text-gray-900">系统账面流水</h2>
+    </div>
+    <table class="w-full text-sm">
+      <thead class="bg-gray-50 text-gray-600">
+        <tr>
+          <th class="px-3 py-2 text-left">时间</th>
+          <th class="px-3 py-2 text-left">类型</th>
+          <th class="px-3 py-2 text-right">金额</th>
+          <th class="px-3 py-2 text-right">余额</th>
+          <th class="px-3 py-2 text-left">tx_hash</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for t in system_txs %}
+        <tr class="border-t">
+          <td class="px-3 py-2 text-xs text-gray-500 whitespace-nowrap">{{ t.created_at.strftime("%m-%d %H:%M") }}</td>
+          <td class="px-3 py-2">
+            {% if t.type == "allocate" %}<span class="px-2 py-0.5 rounded text-xs bg-green-100 text-green-700">拨付</span>
+            {% elif t.type == "replenish" %}<span class="px-2 py-0.5 rounded text-xs bg-amber-100 text-amber-700">补充</span>
+            {% elif t.type == "spend" %}<span class="px-2 py-0.5 rounded text-xs bg-blue-100 text-blue-700">支出</span>
+            {% elif t.type == "return" %}<span class="px-2 py-0.5 rounded text-xs bg-gray-100 text-gray-700">归还</span>
+            {% endif %}
+          </td>
+          <td class="px-3 py-2 text-right font-medium {% if t.type in ('allocate','replenish') %}text-green-600{% else %}text-red-600{% endif %}">
+            {% if t.type in ('allocate','replenish') %}+{% else %}-{% endif %}{{ "%.6f"|format(t.amount|float) }}
+          </td>
+          <td class="px-3 py-2 text-right">{{ "%.6f"|format(t.balance_after|float) }}</td>
+          <td class="px-3 py-2 font-mono text-xs">
+            {% if t.tx_hash %}
+              <a href="https://tronscan.org/#/transaction/{{ t.tx_hash }}" target="_blank"
+                 class="text-blue-600 hover:underline">{{ t.tx_hash[:10] }}…</a>
+            {% else %}-{% endif %}
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5" class="px-3 py-6 text-center text-gray-400">无系统记录</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

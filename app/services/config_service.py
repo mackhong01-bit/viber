@@ -23,6 +23,9 @@ DEFAULTS: dict[str, tuple[str, str]] = {
     "telegram_finance_chat_id": ("", "财务通知群 chat_id（覆盖 .env）"),
     "telegram_manager_chat_id": ("", "管理通知群 chat_id（覆盖 .env）"),
     "duplicate_check_hours": ("24", "重复申请检测窗口（小时）"),
+    "tron_api_endpoint": ("https://apilist.tronscan.org", "Tron API 地址（默认 Tronscan 公共）"),
+    "tron_api_key": ("", "Tronscan/TronGrid API Key（可选，提升速率）"),
+    "usdt_trc20_contract": ("TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t", "USDT-TRC20 合约地址"),
 }
 
 

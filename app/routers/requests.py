@@ -74,10 +74,12 @@ def new_submit(
     user: User = Depends(require_user),
     amount: str = Form(...),
     currency: str = Form("CNY"),
+    account_type: str = Form("cash"),
     category: str = Form(...),
     department: str = Form(""),
     payee: str = Form(""),
     payee_account: str = Form(""),
+    payee_address: str = Form(""),
     purpose: str = Form(...),
     confirm_duplicate: str = Form(""),
     attachment: UploadFile | None = File(None),
@@ -127,10 +129,12 @@ def new_submit(
         applicant_id=user.id,
         amount=amt,
         currency=currency,
+        account_type=account_type,
         category=category,
         department=department or None,
         payee=payee or None,
         payee_account=payee_account or None,
+        payee_address=payee_address.strip() or None,
         purpose=purpose.strip(),
         attachment_path=attachment_path,
         status=PaymentStatus.PENDING_FINANCE.value,
@@ -200,14 +204,21 @@ def _load_request(db: Session, req_id: int) -> PaymentRequest:
 def finance_pay_route(
     req_id: int,
     note: str = Form(""),
+    tx_hash: str = Form(""),
     attachment: UploadFile | None = File(None),
     db: Session = Depends(get_db),
     user: User = Depends(require_user),
 ):
     req = _load_request(db, req_id)
+    if req.account_type == "usdt_trc20" and not tx_hash.strip():
+        raise HTTPException(400, "USDT 付款必须填写链上交易哈希 (tx_hash)")
     attachment_path = save_upload(attachment, subdir="payments")
     diff = payment_service.finance_pay(db, req, user, note.strip() or None, attachment_path)
+    if tx_hash.strip():
+        req.tx_hash = tx_hash.strip()
+        db.commit()
     diff["after"]["attachment"] = attachment_path
+    diff["after"]["tx_hash"] = tx_hash
     audit_log(db, user, "request.finance_pay", "payment_requests", req.id,
               before=diff["before"], after=diff["after"])
     telegram.notify_finance_paid(db, req, user, is_prepay=(req.status == PaymentStatus.PAID_PENDING_APPROVAL.value))

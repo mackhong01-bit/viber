@@ -125,6 +125,8 @@ def users_add(
     role: str = Form(...),
     telegram_chat_id: str = Form(""),
     department: str = Form(""),
+    usdt_trc20_address: str = Form(""),
+    bank_account: str = Form(""),
     db: Session = Depends(get_db),
     user: User = Depends(_admin_only),
 ):
@@ -139,11 +141,48 @@ def users_add(
         role=role,
         telegram_chat_id=telegram_chat_id or None,
         department=department or None,
+        usdt_trc20_address=usdt_trc20_address.strip() or None,
+        bank_account=bank_account.strip() or None,
     )
     db.add(new_user)
     db.commit()
     audit_log(db, user, "user.create", "users", new_user.id,
-              after={"username": username, "role": role})
+              after={"username": username, "role": role,
+                     "usdt": usdt_trc20_address, "bank": bank_account})
+    return RedirectResponse("/admin/users", status_code=303)
+
+
+@router.post("/users/{user_id}/edit")
+def users_edit(
+    user_id: int,
+    full_name: str = Form(...),
+    telegram_chat_id: str = Form(""),
+    department: str = Form(""),
+    usdt_trc20_address: str = Form(""),
+    bank_account: str = Form(""),
+    db: Session = Depends(get_db),
+    user: User = Depends(_admin_only),
+):
+    target = db.get(User, user_id)
+    if not target:
+        raise HTTPException(404)
+    before = {
+        "full_name": target.full_name, "telegram_chat_id": target.telegram_chat_id,
+        "department": target.department, "usdt_trc20_address": target.usdt_trc20_address,
+        "bank_account": target.bank_account,
+    }
+    target.full_name = full_name.strip()
+    target.telegram_chat_id = telegram_chat_id.strip() or None
+    target.department = department.strip() or None
+    target.usdt_trc20_address = usdt_trc20_address.strip() or None
+    target.bank_account = bank_account.strip() or None
+    db.commit()
+    audit_log(db, user, "user.edit", "users", target.id,
+              before=before, after={
+                  "full_name": target.full_name, "telegram_chat_id": target.telegram_chat_id,
+                  "department": target.department, "usdt_trc20_address": target.usdt_trc20_address,
+                  "bank_account": target.bank_account,
+              })
     return RedirectResponse("/admin/users", status_code=303)
 
 
