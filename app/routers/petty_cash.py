@@ -10,7 +10,7 @@ from app.models.petty_cash import PettyCashType
 from app.services.auth import require_user
 from app.services.audit import log as audit_log
 from app.services.uploads import save_upload
-from app.services import petty_cash_service
+from app.services import petty_cash_service, telegram
 from app.templates_env import templates
 
 router = APIRouter(prefix="/petty-cash")
@@ -74,6 +74,7 @@ def allocate(
     audit_log(db, user, "petty_cash.allocate", "petty_cash", entry.id,
               after={"target": target.username, "amount": str(amt),
                      "balance_after": str(entry.balance_after), "attachment": path})
+    telegram.notify_petty_cash(db, entry, user)
     return RedirectResponse("/petty-cash", status_code=303)
 
 
@@ -99,6 +100,7 @@ def replenish(
     audit_log(db, user, "petty_cash.replenish", "petty_cash", entry.id,
               after={"target": target.username, "amount": str(amt),
                      "balance_after": str(entry.balance_after), "attachment": path})
+    telegram.notify_petty_cash(db, entry, user)
     return RedirectResponse("/petty-cash", status_code=303)
 
 
@@ -122,6 +124,7 @@ def spend(
     audit_log(db, user, "petty_cash.spend", "petty_cash", entry.id,
               after={"amount": str(amt), "balance_after": str(entry.balance_after),
                      "note": note, "attachment": path})
+    telegram.notify_petty_cash(db, entry, user)
     return RedirectResponse("/petty-cash", status_code=303)
 
 
@@ -143,4 +146,5 @@ def return_cash(
     audit_log(db, user, "petty_cash.return", "petty_cash", entry.id,
               after={"amount": str(amt), "balance_after": str(entry.balance_after),
                      "attachment": path})
+    telegram.notify_petty_cash(db, entry, user)
     return RedirectResponse("/petty-cash", status_code=303)

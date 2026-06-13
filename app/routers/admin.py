@@ -8,7 +8,7 @@ from app.models.config import Category, Department
 from app.models.audit import AuditLog
 from app.services.auth import require_user
 from app.services.audit import log as audit_log
-from app.services import config_service
+from app.services import config_service, telegram as tg_service
 from app.services.security import hash_password
 from app.templates_env import templates
 
@@ -164,6 +164,60 @@ def users_toggle(
     audit_log(db, user, "user.toggle", "users", target.id,
               before=before, after={"is_active": target.is_active})
     return RedirectResponse("/admin/users", status_code=303)
+
+
+@router.post("/telegram/test")
+def telegram_test(
+    target: str = Form("finance"),
+    db: Session = Depends(get_db),
+    user: User = Depends(_admin_only),
+):
+    text = f"🔧 测试推送 from {config_service.get_config(db, 'company_name')}\n操作人：{user.full_name}"
+    if target == "finance":
+        ok = tg_service.send_to_finance(db, text)
+    else:
+        ok = tg_service.send_to_manager(db, text)
+    audit_log(db, user, "telegram.test", "system_config", None,
+              after={"target": target, "ok": ok})
+    return RedirectResponse(f"/admin/config?test={'ok' if ok else 'fail'}", status_code=303)
+
+
+@router.get("/telegram/updates")
+def telegram_updates(
+    db: Session = Depends(get_db),
+    user: User = Depends(_admin_only),
+):
+    """获取 Bot 收到的最近消息，方便从中提取群 chat_id。"""
+    import asyncio, httpx
+    token = config_service.get_config(db, "telegram_bot_token") or ""
+    if not token:
+        return {"error": "Telegram Bot Token 未配置"}
+    try:
+        async def fetch():
+            async with httpx.AsyncClient(timeout=8) as c:
+                r = await c.get(f"https://api.telegram.org/bot{token}/getUpdates")
+                return r.json()
+        try:
+            data = asyncio.run(fetch())
+        except RuntimeError:
+            loop = asyncio.new_event_loop()
+            try:
+                data = loop.run_until_complete(fetch())
+            finally:
+                loop.close()
+    except Exception as e:
+        return {"error": str(e)}
+    chats = {}
+    for upd in data.get("result", []):
+        msg = upd.get("message") or upd.get("channel_post") or {}
+        chat = msg.get("chat", {})
+        if chat.get("id"):
+            chats[str(chat["id"])] = {
+                "type": chat.get("type"),
+                "title": chat.get("title") or chat.get("username") or chat.get("first_name"),
+            }
+    return {"raw": data, "chats": chats,
+            "hint": "把上面的 chat id（群是负数）填到 admin/config 的 telegram_finance_chat_id / telegram_manager_chat_id"}
 
 
 @router.get("/audit")

@@ -42,7 +42,8 @@ uvicorn app.main:app --reload
 - [x] **M1**：用户/角色 + 系统配置 + 申请单 CRUD + 审计日志
 - [x] **M2**：三级审批流 + 强制截图凭证 + 字段锁定
 - [x] **M3**：备用金（拨付/支出/补充/归还，每笔强制截图）+ 报表（今日/本周/本月/本年 + CSV 导出）
-- [ ] **M4**：Telegram Bot（按钮审批、推送通知）
+- [x] **M4**：Telegram 推送（申请提交/付款/审批/备用金动作，财务群+管理群+申请人私聊）
+- [ ] M5（可选）：Telegram 内联按钮审批 / 双因素登录 / 多币种实时汇率
 
 ## 角色
 
@@ -66,14 +67,16 @@ uvicorn app.main:app --reload
 - `duplicate_check_hours` — 重复申请检测窗口
 - Telegram 各类事件推送开关
 
-## Telegram Bot 创建步骤
+## Telegram Bot 配置（系统已支持后台配置，不用改 .env）
 
-1. Telegram 搜 `@BotFather`，发 `/newbot`
-2. 起名字 + username（必须 `*bot` 结尾）
-3. 拿到 token，填入 `.env` 的 `TELEGRAM_BOT_TOKEN`
-4. 建群把 bot 拉进去，设为管理员
-5. 群里发一条消息，访问 `https://api.telegram.org/bot<TOKEN>/getUpdates` 拿群 `chat.id`
-6. 填入 `.env` 的 `TELEGRAM_FINANCE_CHAT_ID` / `TELEGRAM_MANAGER_CHAT_ID`
+1. Telegram 搜 `@BotFather`，发 `/newbot` → 拿到 token
+2. 建一个"财务群"和一个"管理群"，把 bot 拉进去**设为管理员**，群里随便发一条消息
+3. 登录系统 → **后台 → 系统配置** → 填入 `telegram_bot_token`
+4. 点页面顶部"**获取 chat_id**" → 复制群 id（负数）→ 填到 `telegram_finance_chat_id` / `telegram_manager_chat_id` → 保存
+5. 点"**测试推送 → 财务群** / **管理群**" 验证
+6. （可选）在用户管理里给每个员工填 `telegram_chat_id`（私聊 id），这样他自己的申请被审批后会私信通知
+
+> .env 里的 token / chat_id 仅作为回退默认值，DB 里的优先级更高。
 
 ## 防篡改设计
 

@@ -11,7 +11,7 @@ from app.models.config import Category, Department
 from app.services.auth import require_user
 from app.services.audit import log as audit_log
 from app.services.uploads import save_upload
-from app.services import config_service, payment_service
+from app.services import config_service, payment_service, telegram
 from app.templates_env import templates
 
 router = APIRouter(prefix="/requests")
@@ -144,6 +144,7 @@ def new_submit(
         after={"code": req.code, "amount": str(amt), "category": category,
                "purpose": purpose, "attachment": attachment_path},
     )
+    telegram.notify_request_created(db, req)
 
     return RedirectResponse(f"/requests/{req.id}", status_code=303)
 
@@ -209,6 +210,7 @@ def finance_pay_route(
     diff["after"]["attachment"] = attachment_path
     audit_log(db, user, "request.finance_pay", "payment_requests", req.id,
               before=diff["before"], after=diff["after"])
+    telegram.notify_finance_paid(db, req, user, is_prepay=(req.status == PaymentStatus.PAID_PENDING_APPROVAL.value))
     return RedirectResponse(f"/requests/{req.id}", status_code=303)
 
 
@@ -225,6 +227,7 @@ def finance_reject_route(
     diff = payment_service.finance_reject(db, req, user, note.strip() or None, attachment_path)
     audit_log(db, user, "request.finance_reject", "payment_requests", req.id,
               before=diff["before"], after=diff["after"])
+    telegram.notify_finance_rejected(db, req, user, note.strip() or None)
     return RedirectResponse(f"/requests/{req.id}", status_code=303)
 
 
@@ -241,6 +244,7 @@ def manager_approve_route(
     diff = payment_service.manager_approve(db, req, user, note.strip() or None, attachment_path)
     audit_log(db, user, "request.manager_approve", "payment_requests", req.id,
               before=diff["before"], after=diff["after"])
+    telegram.notify_manager_decision(db, req, user, approved=True, note=note.strip() or None)
     return RedirectResponse(f"/requests/{req.id}", status_code=303)
 
 
@@ -257,6 +261,7 @@ def manager_reject_route(
     diff = payment_service.manager_reject(db, req, user, note.strip() or None, attachment_path)
     audit_log(db, user, "request.manager_reject", "payment_requests", req.id,
               before=diff["before"], after=diff["after"])
+    telegram.notify_manager_decision(db, req, user, approved=False, note=note.strip() or None)
     return RedirectResponse(f"/requests/{req.id}", status_code=303)
 
 

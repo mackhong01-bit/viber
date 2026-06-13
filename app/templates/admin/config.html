@@ -2,6 +2,33 @@
 {% block title %}系统配置{% endblock %}
 {% block content %}
 <h1 class="text-2xl font-bold text-gray-900 mb-6">系统配置</h1>
+
+{% if request.query_params.get("test") == "ok" %}
+<div class="mb-4 p-3 rounded bg-green-50 text-green-800 text-sm">✅ Telegram 测试推送已发送</div>
+{% elif request.query_params.get("test") == "fail" %}
+<div class="mb-4 p-3 rounded bg-red-50 text-red-700 text-sm">❌ Telegram 推送失败：请检查 token / chat_id / 网络</div>
+{% endif %}
+
+<div class="mb-4 p-4 rounded bg-blue-50 border border-blue-200 max-w-3xl">
+  <div class="font-semibold text-blue-900 mb-2">📨 Telegram 工具</div>
+  <div class="text-sm text-blue-800 mb-3">
+    1) 把 bot 拉进财务群/管理群并设为管理员，群里随便发条消息<br>
+    2) 点"获取 chat_id"，从结果里复制群 id（群是负数），填到下面的配置项<br>
+    3) 点"测试推送"验证
+  </div>
+  <div class="flex gap-2 flex-wrap">
+    <form method="post" action="/admin/telegram/test" class="inline">
+      <input type="hidden" name="target" value="finance">
+      <button class="bg-blue-600 text-white px-3 py-1.5 rounded text-sm">测试推送 → 财务群</button>
+    </form>
+    <form method="post" action="/admin/telegram/test" class="inline">
+      <input type="hidden" name="target" value="manager">
+      <button class="bg-blue-600 text-white px-3 py-1.5 rounded text-sm">测试推送 → 管理群</button>
+    </form>
+    <a href="/admin/telegram/updates" target="_blank"
+       class="bg-gray-700 text-white px-3 py-1.5 rounded text-sm">获取 chat_id（getUpdates）</a>
+  </div>
+</div>
 <form method="post" action="/admin/config" class="bg-white rounded-lg shadow-sm p-6 max-w-3xl">
   <div class="space-y-4">
     {% for key, value, desc in configs %}

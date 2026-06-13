@@ -19,6 +19,9 @@ DEFAULTS: dict[str, tuple[str, str]] = {
     "telegram_notify_new_request": ("true", "新申请推送 Telegram"),
     "telegram_notify_payment": ("true", "付款推送 Telegram"),
     "telegram_notify_approval": ("true", "审批结果推送 Telegram"),
+    "telegram_bot_token": ("", "Telegram Bot Token（覆盖 .env）"),
+    "telegram_finance_chat_id": ("", "财务通知群 chat_id（覆盖 .env）"),
+    "telegram_manager_chat_id": ("", "管理通知群 chat_id（覆盖 .env）"),
     "duplicate_check_hours": ("24", "重复申请检测窗口（小时）"),
 }
 
